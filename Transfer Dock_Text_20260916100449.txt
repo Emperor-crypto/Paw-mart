@@ -1,0 +1,633 @@
+const products = [
+  {
+    id: 1,
+    name: "Premium Dog Food",
+    category: "Dogs",
+    price: 18500,
+    icon: "🥩",
+    description: "Nutritious everyday meal"
+  },
+  {
+    id: 2,
+    name: "Cozy Dog Bed",
+    category: "Dogs",
+    price: 32000,
+    icon: "🛏️",
+    description: "Soft and comfortable"
+  },
+  {
+    id: 3,
+    name: "Cat Food Pack",
+    category: "Cats",
+    price: 14500,
+    icon: "🐟",
+    description: "Tasty balanced nutrition"
+  },
+  {
+    id: 4,
+    name: "Cat Scratching Toy",
+    category: "Cats",
+    price: 12500,
+    icon: "🧶",
+    description: "Fun indoor activity"
+  },
+  {
+    id: 5,
+    name: "Bird Seed Mix",
+    category: "Birds",
+    price: 8500,
+    icon: "🌾",
+    description: "Daily food blend"
+  },
+  {
+    id: 6,
+    name: "Bird Swing Toy",
+    category: "Birds",
+    price: 7000,
+    icon: "🪵",
+    description: "Fun cage accessory"
+  },
+  {
+    id: 7,
+    name: "Aquarium Starter Kit",
+    category: "Fish",
+    price: 55000,
+    icon: "🐠",
+    description: "Beginner-friendly setup"
+  },
+  {
+    id: 8,
+    name: "Fish Flake Food",
+    category: "Fish",
+    price: 6500,
+    icon: "🫧",
+    description: "Daily aquarium food"
+  }
+];
+
+let cart = JSON.parse(
+  localStorage.getItem("pawMartCart") || "[]"
+);
+
+let favorites = JSON.parse(
+  localStorage.getItem("pawMartFavorites") || "[]"
+);
+
+let activeCategory = "All";
+
+const money = (number) => {
+  return "₦" + number.toLocaleString("en-NG");
+};
+
+
+/* =========================
+   DISPLAY PRODUCTS
+========================= */
+
+function renderProducts() {
+
+  const searchText =
+    document
+      .getElementById("search")
+      .value
+      .toLowerCase()
+      .trim();
+
+  const filteredProducts = products.filter((product) => {
+
+    const matchesCategory =
+      activeCategory === "All" ||
+      product.category === activeCategory;
+
+    const matchesSearch =
+      product.name
+        .toLowerCase()
+        .includes(searchText) ||
+      product.category
+        .toLowerCase()
+        .includes(searchText);
+
+    return matchesCategory && matchesSearch;
+  });
+
+
+  document.getElementById("products").innerHTML =
+    filteredProducts.map((product) => {
+
+      const isFavorite =
+        favorites.includes(product.id);
+
+      return `
+        <article class="product">
+
+          <button
+            class="favorite ${isFavorite ? "active" : ""}"
+            onclick="toggleFavorite(${product.id})"
+          >
+            ${isFavorite ? "♥" : "♡"}
+          </button>
+
+          <div class="product-img">
+            ${product.icon}
+          </div>
+
+          <div class="product-info">
+
+            <h3>
+              ${product.name}
+            </h3>
+
+            <p>
+              ${product.description}
+            </p>
+
+            <div class="price-row">
+
+              <span class="price">
+                ${money(product.price)}
+              </span>
+
+              <button
+                class="add-btn"
+                onclick="addToCart(${product.id})"
+              >
+                + Cart
+              </button>
+
+            </div>
+
+          </div>
+
+        </article>
+      `;
+
+    }).join("");
+
+
+  document
+    .getElementById("empty")
+    .classList.toggle(
+      "hidden",
+      filteredProducts.length !== 0
+    );
+}
+
+
+/* =========================
+   SAVE DATA
+========================= */
+
+function saveData() {
+
+  localStorage.setItem(
+    "pawMartCart",
+    JSON.stringify(cart)
+  );
+
+  localStorage.setItem(
+    "pawMartFavorites",
+    JSON.stringify(favorites)
+  );
+}
+
+
+/* =========================
+   ADD TO CART
+========================= */
+
+function addToCart(productId) {
+
+  const existingItem =
+    cart.find(item => item.id === productId);
+
+  if (existingItem) {
+
+    existingItem.quantity++;
+
+  } else {
+
+    cart.push({
+      id: productId,
+      quantity: 1
+    });
+
+  }
+
+  saveData();
+
+  renderCart();
+
+  updateCartCount();
+
+  showToast("Added to cart 🛒");
+}
+
+
+/* =========================
+   CHANGE QUANTITY
+========================= */
+
+function changeQuantity(productId, amount) {
+
+  const item =
+    cart.find(item => item.id === productId);
+
+  if (!item) return;
+
+  item.quantity += amount;
+
+
+  if (item.quantity <= 0) {
+
+    cart =
+      cart.filter(item => item.id !== productId);
+
+  }
+
+  saveData();
+
+  renderCart();
+
+  updateCartCount();
+}
+
+
+/* =========================
+   RENDER CART
+========================= */
+
+function renderCart() {
+
+  const cartContainer =
+    document.getElementById("cartItems");
+
+
+  if (cart.length === 0) {
+
+    cartContainer.innerHTML = `
+      <div style="
+        text-align:center;
+        color:var(--muted);
+        padding:50px 10px;
+      ">
+
+        🛒
+
+        <br><br>
+
+        Your cart is empty.
+
+      </div>
+    `;
+
+  } else {
+
+    cartContainer.innerHTML =
+      cart.map(item => {
+
+        const product =
+          products.find(
+            p => p.id === item.id
+          );
+
+        return `
+          <div class="cart-item">
+
+            <div class="cart-thumb">
+              ${product.icon}
+            </div>
+
+            <div class="cart-details">
+
+              <h4>
+                ${product.name}
+              </h4>
+
+              <p>
+                ${money(product.price)} each
+              </p>
+
+              <div class="quantity">
+
+                <button
+                  onclick="changeQuantity(${product.id}, -1)"
+                >
+                  −
+                </button>
+
+                <b>
+                  ${item.quantity}
+                </b>
+
+                <button
+                  onclick="changeQuantity(${product.id}, 1)"
+                >
+                  +
+                </button>
+
+              </div>
+
+            </div>
+
+            <strong>
+              ${money(
+                product.price *
+                item.quantity
+              )}
+            </strong>
+
+          </div>
+        `;
+
+      }).join("");
+  }
+
+
+  const total =
+    cart.reduce((sum, item) => {
+
+      const product =
+        products.find(
+          p => p.id === item.id
+        );
+
+      return (
+        sum +
+        product.price *
+        item.quantity
+      );
+
+    }, 0);
+
+
+  document.getElementById("total").textContent =
+    money(total);
+}
+
+
+/* =========================
+   CART COUNT
+========================= */
+
+function updateCartCount() {
+
+  const count =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.quantity,
+      0
+    );
+
+  document.getElementById(
+    "cartCount"
+  ).textContent = count;
+}
+
+
+/* =========================
+   FAVORITES
+========================= */
+
+function toggleFavorite(productId) {
+
+  if (favorites.includes(productId)) {
+
+    favorites =
+      favorites.filter(
+        id => id !== productId
+      );
+
+    showToast("Removed from favorites");
+
+  } else {
+
+    favorites.push(productId);
+
+    showToast("Saved to favorites ♥");
+  }
+
+  saveData();
+
+  renderProducts();
+}
+
+
+/* =========================
+   CATEGORY BUTTONS
+========================= */
+
+document
+  .querySelectorAll(".category")
+  .forEach(button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        document
+          .querySelectorAll(".category")
+          .forEach(
+            btn =>
+              btn.classList.remove("active")
+          );
+
+        button.classList.add("active");
+
+        activeCategory =
+          button.dataset.category;
+
+        renderProducts();
+
+      }
+    );
+
+  });
+
+
+/* =========================
+   SEARCH
+========================= */
+
+document
+  .getElementById("search")
+  .addEventListener(
+    "input",
+    renderProducts
+  );
+
+
+/* =========================
+   CART OPEN/CLOSE
+========================= */
+
+function openCart() {
+
+  document
+    .getElementById("cartPanel")
+    .classList.add("open");
+
+  document
+    .getElementById("overlay")
+    .classList.remove("hidden");
+}
+
+
+function closeCart() {
+
+  document
+    .getElementById("cartPanel")
+    .classList.remove("open");
+
+  document
+    .getElementById("overlay")
+    .classList.add("hidden");
+}
+
+
+document
+  .getElementById("cartBtn")
+  .addEventListener(
+    "click",
+    openCart
+  );
+
+
+document
+  .getElementById("mobileCart")
+  .addEventListener(
+    "click",
+    openCart
+  );
+
+
+document
+  .getElementById("closeCart")
+  .addEventListener(
+    "click",
+    closeCart
+  );
+
+
+document
+  .getElementById("overlay")
+  .addEventListener(
+    "click",
+    closeCart
+  );
+
+
+/* =========================
+   DARK MODE
+========================= */
+
+document
+  .getElementById("themeBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      document.body.classList.toggle(
+        "dark"
+      );
+
+      const darkMode =
+        document.body.classList.contains(
+          "dark"
+        );
+
+      document.getElementById(
+        "themeBtn"
+      ).textContent =
+        darkMode ? "☀️" : "🌙";
+
+      localStorage.setItem(
+        "pawMartDark",
+        darkMode
+      );
+
+    }
+  );
+
+
+/* =========================
+   CHECKOUT
+========================= */
+
+document
+  .getElementById("checkout")
+  .addEventListener(
+    "click",
+    () => {
+
+      if (cart.length === 0) {
+
+        showToast(
+          "Your cart is empty"
+        );
+
+        return;
+      }
+
+      showToast(
+        "Checkout coming in V2 🚀"
+      );
+
+    }
+  );
+
+
+/* =========================
+   TOAST
+========================= */
+
+let toastTimer;
+
+function showToast(message) {
+
+  const toast =
+    document.getElementById("toast");
+
+  toast.textContent = message;
+
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer =
+    setTimeout(
+      () =>
+        toast.classList.remove("show"),
+      1800
+    );
+}
+
+
+/* =========================
+   LOAD SAVED THEME
+========================= */
+
+if (
+  localStorage.getItem(
+    "pawMartDark"
+  ) === "true"
+) {
+
+  document.body.classList.add(
+    "dark"
+  );
+
+  document.getElementById(
+    "themeBtn"
+  ).textContent = "☀️";
+}
+
+
+/* =========================
+   START APP
+========================= */
+
+renderProducts();
+
+renderCart();
+
+updateCartCount();
